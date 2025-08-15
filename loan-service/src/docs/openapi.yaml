@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Loan-Return Service
+  version: "1.0.0"
+servers:
+  - url: http://localhost:5002
+tags:
+  - name: Loans
+
+components:
+  schemas:
+    Loan:
+      type: object
+      properties:
+        id: { type: string }
+        bookId: { type: string }
+        userId: { type: string }
+        loanDate: { type: string, format: date-time }
+        dueDate: { type: string, format: date-time }
+        returnDate: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [active, returned, canceled] }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    LoanCreate:
+      type: object
+      required: [bookId, dueDate]
+      properties:
+        bookId: { type: string, example: "650b8a1e3f1a2c0012345678" }
+        dueDate: { type: string, format: date-time, example: "2025-09-01T00:00:00Z" }
+        note: { type: string }
+    LoanExtend:
+      type: object
+      properties:
+        extraDays: { type: integer, default: 7, example: 14 }
+    LoanNote:
+      type: object
+      properties:
+        note: { type: string, example: "Rahlo poškodovana platnica" }
+    ReturnRequest:
+      type: object
+      required: [loanId]
+      properties:
+        loanId: { type: string }
+        state:
+          type: string
+          enum: [unharmed, damaged]
+          description: Optional – update book state in Book Service
+
+paths:
+  /loans:
+    get:
+      tags: [Loans]
+      summary: Pridobi seznam vseh izposoj
+      parameters:
+        - in: query
+          name: userId
+          schema: { type: string }
+        - in: query
+          name: bookId
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [active, returned, canceled] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Loan" }
+    post:
+      tags: [Loans]
+      summary: Ustvari novo izposojo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoanCreate" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Loan" } } } }
+        "404": { description: Knjiga ne obstaja }
+        "409": { description: Knjiga je že izposojena }
+
+  /loans/{loanId}:
+    get:
+      tags: [Loans]
+      summary: Pridobi podrobnosti posamezne izposoje
+      parameters:
+        - in: path
+          name: loanId
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Loan" } } } }
+        "400": { description: Neveljaven id }
+        "404": { description: Ni najdeno }
+
+  /returns:
+    post:
+      tags: [Loans]
+      summary: Zabeleži vracilo knjige (in po želji posodobi stanje knjige)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReturnRequest" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Loan" } } } }
+        "404": { description: Izposoja ni najdena }
+        "409": { description: Izposoja ni aktivna }
+
+  /loans/{loanId}/extend:
+    put:
+      tags: [Loans]
+      summary: Podaljša izposojo za dolocen cas
+      parameters:
+        - in: path
+          name: loanId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoanExtend" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Loan" } } } }
+        "404": { description: Izposoja ni najdena }
+        "409": { description: Izposoja ni aktivna }
+
+  /loans/{loanId}/note:
+    put:
+      tags: [Loans]
+      summary: Doda ali posodobi opombo pri izposoji
+      parameters:
+        - in: path
+          name: loanId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoanNote" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Loan" } } } }
+        "404": { description: Izposoja ni najdena }
+
+  /loans/clear-old:
+    delete:
+      tags: [Loans]
+      summary: Pobriše vse izposoje, starejše od 1 leta
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: integer }
+
+  /loans/cancel/{loanId}:
+    delete:
+      tags: [Loans]
+      summary: Preklice izposojo
+      parameters:
+        - in: path
+          name: loanId
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Canceled }
+        "404": { description: Izposoja ni najdena }
+        "409": { description: Izposoja ni aktivna }

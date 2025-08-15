@@ -1,0 +1,19 @@
+# 1) Namesti odvisnosti
+npm install
+
+# 2) Ustvari .env (kopiraj iz .env.example in po potrebi popravi)
+# Primer:
+# PORT=5002
+# MONGO_URL=mongodb+srv://eriklasic:ImRLKeb3s98fbGrF@cluster0.wtxui1k.mongodb.net/loanservice?retryWrites=true&w=majority
+# USER_SERVICE_URL=http://localhost:5001/api
+# BOOK_SERVICE_URL=http://localhost:8000
+# DISABLE_AUTH=false
+
+# 3) Lokalni zagon
+npm start
+
+# ali z Docker
+docker compose up --build -d
+
+# 4) Preveri
+Start-Process http://localhost:5002/docs
