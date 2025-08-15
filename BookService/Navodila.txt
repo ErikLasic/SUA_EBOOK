@@ -1,0 +1,16 @@
+python -m venv venv
+
+venv\Scripts\activate
+
+pip install fastapi uvicorn pymongo python-dotenv
+
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload
+
+http://127.0.0.1:8000/docs ---> SWAGGER DOKUMENTACIJA
+http://127.0.0.1:8000/openapi.json ---> OpenAPI JSON DOKUMENTACIJA
+
+DOCKER:
+docker build -t bookservice .
+docker run -d -p 8000:8000 --name bookserviceapp bookservice
