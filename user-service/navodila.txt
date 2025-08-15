@@ -2,10 +2,6 @@
 npm install
 
 # 2) Ustvari .env (kopiraj iz .env.example in po potrebi popravi)
-# Primer:
-# PORT=5001
-# MONGO_URL=mongodb+srv://eriklasic:ImRLKeb3s98fbGrF@cluster0.wtxui1k.mongodb.net/userservice?retryWrites=true&w=majority
-# JWT_SECRET=mysecretkey
 
 # 3) Lokalni zagon
 npm start
