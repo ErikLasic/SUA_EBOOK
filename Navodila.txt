@@ -1,0 +1,3 @@
+docker-compose up --build
+
+^^ Zagon docker-compose (vseh 4 mikrostoritev)
