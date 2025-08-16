@@ -41,9 +41,9 @@ async function login(req, res) {
     await user.save();
 
     const token = jwt.sign(
-      { sub: String(user._id), email: user.email, role: user.role },
+      { sub: String(user._id), email: user.email, name: user.name, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '7d', issuer: process.env.JWT_ISSUER }
     );
 
     return res.json({ token, user: toPublic(user) });
@@ -75,7 +75,6 @@ async function getUser(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id))
       return res.status(400).json({ message: 'Neveljaven id' });
-
     const u = await User.findById(req.params.id);
     if (!u) return res.status(404).json({ message: 'Uporabnik ni najden' });
     res.json(toPublic(u));
@@ -121,7 +120,6 @@ async function deleteUser(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id))
       return res.status(400).json({ message: 'Neveljaven id' });
-
     const u = await User.findByIdAndDelete(req.params.id);
     if (!u) return res.status(404).json({ message: 'Uporabnik ni najden' });
     res.status(204).send();
@@ -136,14 +134,13 @@ async function deleteInactive(req, res) {
   } catch (e) { res.status(500).json({ message: e.message }); }
 }
 
-/* ---------- helperji za druge storitve ---------- */
+/* ----- helpers ----- */
 
 // GET /me
 async function me(req, res) {
   try {
     const userId = req.user?.sub;
     if (!userId) return res.status(401).json({ message: 'Missing token' });
-
     const u = await User.findById(userId);
     if (!u) return res.status(404).json({ message: 'Uporabnik ni najden' });
     return res.json(toPublic(u));
@@ -156,14 +153,20 @@ function verifyToken(req, res) {
     const hdr = req.headers.authorization || '';
     const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
     if (!token) return res.status(400).json({ message: 'Missing Bearer token' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      issuer: process.env.JWT_ISSUER
+    });
+
     return res.json({
       valid: true,
       sub: decoded.sub,
       email: decoded.email,
+      name: decoded.name,
       role: decoded.role,
       iat: decoded.iat,
-      exp: decoded.exp
+      exp: decoded.exp,
+      iss: decoded.iss
     });
   } catch {
     return res.status(401).json({ valid: false, message: 'Invalid token' });

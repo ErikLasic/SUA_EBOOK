@@ -53,28 +53,26 @@ async function getLoan(req, res) {
   }
 }
 
-// POST /loans (ustvari izposojo)
+// POST /loans
 async function createLoan(req, res) {
   try {
-    // 1) preveri JWT (user-service)
     const authHeader = req.headers.authorization || "";
     const v = await verifyJwt(authHeader);
     if (!v?.valid && process.env.DISABLE_AUTH !== "true")
       return res.status(401).json({ message: "Invalid token" });
-    const userId = v?.sub || req.body.userId; // fallback za DISABLE_AUTH
+    const userId = v?.sub || req.body.userId;
 
     const { bookId, dueDate, note } = req.body;
     if (!bookId || !dueDate)
       return res.status(400).json({ message: "bookId in dueDate sta obvezna" });
 
-    // 2) preveri, da knjiga obstaja (book-service)
+    // preveri, da knjiga obstaja
     await fetchBook(bookId);
 
-    // 3) preveri, da ni aktivne izposoje za to knjigo
+    // prepreƒçi dvojno aktivno izposojo
     const active = await Loan.findOne({ bookId, status: "active" });
-    if (active) return res.status(409).json({ message: "Knjiga je ûe izposojena" });
+    if (active) return res.status(409).json({ message: "Knjiga je ≈æe izposojena" });
 
-    // 4) ustvari
     const loan = await Loan.create({ bookId, userId, dueDate, note });
     res.status(201).json(toPublic(loan));
   } catch (e) {
@@ -85,10 +83,10 @@ async function createLoan(req, res) {
   }
 }
 
-// POST /returns (zabeleûi vracilo, opcijsko nastavi stanje knjige)
+// POST /returns
 async function recordReturn(req, res) {
   try {
-    const { loanId, state } = req.body; // state: unharmed|damaged (opcijsko)
+    const { loanId, state } = req.body;
     if (!loanId) return res.status(400).json({ message: "loanId je obvezen" });
 
     const l = await Loan.findById(loanId);
@@ -99,9 +97,8 @@ async function recordReturn(req, res) {
     l.status = "returned";
     await l.save();
 
-    // ce pride state, posodobi stanje knjige v book-service
     if (state === "unharmed" || state === "damaged") {
-      try { await updateBookState(l.bookId, state); } catch (_) { /* ne blokiraj vracila */ }
+      try { await updateBookState(l.bookId, state); } catch (_) { /* ignore */ }
     }
 
     res.json(toPublic(l));
@@ -142,9 +139,13 @@ async function updateNote(req, res) {
   }
 }
 
-// DELETE /loans/clear-old
+// DELETE /loans/clear-old  (ADMIN ONLY)
 async function clearOld(req, res) {
   try {
+    const v = await verifyJwt(req.headers.authorization || '');
+    if (!v?.valid) return res.status(401).json({ message: 'Unauthorized' });
+    if (v.role !== 'admin') return res.status(403).json({ message: 'Forbidden (admin only)' });
+
     const cutoff = new Date();
     cutoff.setFullYear(cutoff.getFullYear() - 1);
     const r = await Loan.deleteMany({ createdAt: { $lt: cutoff } });
