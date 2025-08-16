@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from app.models import Book, BookCreate, BookUpdate
 from app.database import books_collection
 from bson import ObjectId
+from app.auth import verify_token  # JWT token verifier
 
 router = APIRouter()
 
@@ -18,11 +19,14 @@ def book_helper(book) -> dict:
 # POST /books
 @router.post("/", response_model=Book, summary="Add a new book", responses={
     200: {"description": "Book added successfully"},
-    400: {"description": "Invalid input"}
+    400: {"description": "Invalid input"},
+    401: {"description": "Unauthorized"}
 })
-def add_book(book: BookCreate):
+def add_book(book: BookCreate, token: dict = Depends(verify_token)):
     """
     Adds a single book to the database.
+
+    Only users with role 'user' or 'admin' can add books.
 
     - **title**: title of the book
     - **author**: book author
@@ -30,6 +34,9 @@ def add_book(book: BookCreate):
     - **genre**: genre of the book
     - **state**: condition ('unharmed' or 'damaged')
     """
+    if token["role"] not in ["user", "admin"]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
     book_dict = book.dict()
     result = books_collection.insert_one(book_dict)
     book_dict["id"] = str(result.inserted_id)
@@ -37,10 +44,15 @@ def add_book(book: BookCreate):
 
 # POST /books/bulk
 @router.post("/bulk", response_model=list[Book], summary="Add multiple books at once")
-def add_books_bulk(books: list[BookCreate]):
+def add_books_bulk(books: list[BookCreate], token: dict = Depends(verify_token)):
     """
     Adds multiple books to the database.
+
+    Only users with role 'user' or 'admin' can add books.
     """
+    if token["role"] not in ["user", "admin"]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     book_dicts = [b.dict() for b in books]
     result = books_collection.insert_many(book_dicts)
     for i, b in enumerate(book_dicts):
@@ -71,12 +83,18 @@ def get_book(book_id: str):
 @router.put("/{book_id}", summary="Update a book by ID", responses={
     200: {"description": "Book updated successfully"},
     400: {"description": "No fields to update"},
-    404: {"description": "Book not found"}
+    404: {"description": "Book not found"},
+    401: {"description": "Unauthorized"}
 })
-def update_book(book_id: str, book: BookUpdate):
+def update_book(book_id: str, book: BookUpdate, token: dict = Depends(verify_token)):
     """
     Updates book fields partially.
+
+    Only admins can update books.
     """
+    if token["role"] != "admin":
+        raise HTTPException(status_code=401, detail="Admin privileges required")
+
     update_data = {k: v for k, v in book.dict().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -90,9 +108,18 @@ def update_book(book_id: str, book: BookUpdate):
 @router.put("/{book_id}/state", summary="Update state of a book", responses={
     200: {"description": "Book state updated successfully"},
     400: {"description": "Invalid state"},
-    404: {"description": "Book not found"}
+    404: {"description": "Book not found"},
+    401: {"description": "Unauthorized"}
 })
-def update_book_state(book_id: str, state: str = Query(..., description="State must be 'unharmed' or 'damaged'", example="damaged")):
+def update_book_state(book_id: str, state: str = Query(..., description="State must be 'unharmed' or 'damaged'", example="damaged"), token: dict = Depends(verify_token)):
+    """
+    Updates the state of a book.
+
+    Only admins can update book state.
+    """
+    if token["role"] != "admin":
+        raise HTTPException(status_code=401, detail="Admin privileges required")
+
     if state not in ["unharmed", "damaged"]:
         raise HTTPException(status_code=400, detail="State must be 'unharmed' or 'damaged'")
     result = books_collection.update_one({"_id": ObjectId(book_id)}, {"$set": {"state": state}})
@@ -101,14 +128,30 @@ def update_book_state(book_id: str, state: str = Query(..., description="State m
     raise HTTPException(status_code=404, detail="Book not found")
 
 # DELETE /books/damaged
-@router.delete("/damaged", summary="Delete all damaged books", responses={200: {"description": "Number of deleted books"}})
-def delete_damaged_books():
+@router.delete("/damaged", summary="Delete all damaged books", responses={200: {"description": "Number of deleted books"}, 401: {"description": "Unauthorized"}})
+def delete_damaged_books(token: dict = Depends(verify_token)):
+    """
+    Deletes all damaged books.
+
+    Only admins can delete books.
+    """
+    if token["role"] != "admin":
+        raise HTTPException(status_code=401, detail="Admin privileges required")
+    
     result = books_collection.delete_many({"state": "damaged"})
     return {"deleted_count": result.deleted_count}
 
 # DELETE /books/{id}
-@router.delete("/{book_id}", summary="Delete a book by ID", responses={200: {"description": "Book deleted"}, 404: {"description": "Book not found"}})
-def delete_book(book_id: str):
+@router.delete("/{book_id}", summary="Delete a book by ID", responses={200: {"description": "Book deleted"}, 404: {"description": "Book not found"}, 401: {"description": "Unauthorized"}})
+def delete_book(book_id: str, token: dict = Depends(verify_token)):
+    """
+    Deletes a single book by ID.
+
+    Only admins can delete books.
+    """
+    if token["role"] != "admin":
+        raise HTTPException(status_code=401, detail="Admin privileges required")
+    
     result = books_collection.delete_one({"_id": ObjectId(book_id)})
     if result.deleted_count:
         return {"message": "Book deleted"}
