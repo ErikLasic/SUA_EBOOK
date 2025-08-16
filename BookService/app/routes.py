@@ -3,8 +3,12 @@ from app.models import Book, BookCreate, BookUpdate
 from app.database import books_collection
 from bson import ObjectId
 from app.auth import verify_token  # JWT token verifier
+import requests  # dodamo za klice HTTP
+
 
 router = APIRouter()
+
+COUNTER_SERVICE_URL = "https://counter-service-2-0.onrender.com/increment"
 
 def book_helper(book) -> dict:
     return {
@@ -72,12 +76,20 @@ def get_books():
 @router.get("/{book_id}", response_model=Book, summary="Get a single book by ID", responses={404: {"description": "Book not found"}})
 def get_book(book_id: str):
     """
-    Returns a book by its ID.
+    Returns a book by its ID and increments the counter in the counter-service.
     """
     book = books_collection.find_one({"_id": ObjectId(book_id)})
-    if book:
-        return book_helper(book)
-    raise HTTPException(status_code=404, detail="Book not found")
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Klic counter-service
+    try:
+        resp = requests.post(COUNTER_SERVICE_URL, json={"value": 1}, timeout=3)
+        if resp.status_code != 200:
+            print(f"Counter service returned {resp.status_code}: {resp.text}")
+    except requests.RequestException as e:
+        print(f"Error calling counter service: {e}")
+    return book_helper(book)
 
 # PUT /books/{id}
 @router.put("/{book_id}", summary="Update a book by ID", responses={
