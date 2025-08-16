@@ -83,26 +83,27 @@ def get_book(book_id: str):
 @router.put("/{book_id}", summary="Update a book by ID", responses={
     200: {"description": "Book updated successfully"},
     400: {"description": "No fields to update"},
-    404: {"description": "Book not found"},
-    401: {"description": "Unauthorized"}
+    404: {"description": "Book not found"}
 })
 def update_book(book_id: str, book: BookUpdate, token: dict = Depends(verify_token)):
     """
     Updates book fields partially.
 
-    Only admins can update books.
+    Both admins and regular users can update books.
     """
-    if token["role"] != "admin":
-        raise HTTPException(status_code=401, detail="Admin privileges required")
-
     update_data = {k: v for k, v in book.dict().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
     
+    # Optional: če želiš omejiti, da običajni uporabniki ne spreminjajo 'state'
+    if token["role"] != "admin" and "state" in update_data:
+        del update_data["state"]
+
     result = books_collection.update_one({"_id": ObjectId(book_id)}, {"$set": update_data})
     if result.matched_count:
         return {"message": "Book updated"}
     raise HTTPException(status_code=404, detail="Book not found")
+
 
 # PUT /books/{id}/state
 @router.put("/{book_id}/state", summary="Update state of a book", responses={
