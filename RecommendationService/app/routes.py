@@ -5,6 +5,7 @@ from app.auth import verify_token, verify_admin
 from typing import List
 from datetime import datetime, timedelta
 from bson import ObjectId, errors
+import requests
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ def validate_objectid(id_str: str):
 
 @router.post("/train", summary="Update global recommendation model", description="Train/update the global recommendation model. Admin only.")
 def train_global_model(token: dict = Depends(verify_admin)):
+    # --- Posodobi globalni recommendation model ---
     pipeline = [
         {"$match": {"status": {"$in": ["active", "returned"]}}},
         {"$group": {"_id": "$bookId", "count": {"$sum": 1}}},
@@ -30,8 +32,17 @@ def train_global_model(token: dict = Depends(verify_admin)):
             {"$set": {"score": book["count"], "updatedAt": now}},
             upsert=True
         )
-    return {"message": "Global recommendation model updated", "updated": len(popular_books)}
 
+    # --- Klic serverless funkcije (za pošiljanje emaila) ---
+    try:
+        email_api_url = "https://email-service-ten-rust.vercel.app/api/send-email"
+        response = requests.post(email_api_url, timeout=5)
+        response.raise_for_status()
+        print(f"Email poslan, status: {response.json()}")
+    except requests.RequestException as e:
+        print(f"Napaka pri klicu serverless funkcije: {e}")
+
+    return {"message": "Global recommendation model updated", "updated": len(popular_books)}
 
 @router.post("/user/{userId}/settings", summary="Set initial user settings")
 def set_user_settings(userId: str, settings: UserSettings, token: dict = Depends(verify_token)):
