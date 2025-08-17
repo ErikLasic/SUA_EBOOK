@@ -1,8 +1,14 @@
 from fastapi import FastAPI
 from app.routes import router as book_router
+from strawberry.fastapi import GraphQLRouter
+from app.graphql import schema
 
 app = FastAPI()
 app.include_router(book_router, prefix="/books", tags=["books"])
+
+# GraphQL API
+graphql_app = GraphQLRouter(schema)
+app.include_router(graphql_app, prefix="/graphql")
 
 if __name__ == "__main__":
     import uvicorn

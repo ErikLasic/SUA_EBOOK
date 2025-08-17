@@ -14,3 +14,29 @@ http://127.0.0.1:8000/openapi.json ---> OpenAPI JSON DOKUMENTACIJA
 DOCKER:
 docker build -t bookservice .
 docker run -d -p 8000:8000 --name bookserviceapp bookservice
+
+GraphQL:
+http://127.0.0.1:8000/graphql
+
+query {
+  books {
+    id
+    title
+    author
+  }
+}
+
+query {
+  bookById(id: "68a07fa5584c4839551e742a") {
+    title
+    author
+    genre
+  }
+}
+
+query {
+  stats {
+    totalBooks
+    damagedBooks
+  }
+}

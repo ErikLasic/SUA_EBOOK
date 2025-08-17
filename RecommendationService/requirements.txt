@@ -4,3 +4,5 @@ python-dotenv
 pymongo
 python-jose
 requests
+strawberry-graphql
+strawberry-graphql[fastapi]

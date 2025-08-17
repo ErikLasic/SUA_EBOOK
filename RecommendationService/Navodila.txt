@@ -14,3 +14,37 @@ http://127.0.0.1:8001/openapi.json ---> OpenAPI JSON DOKUMENTACIJA
 DOCKER:
 docker build -t recommendationservice .
 docker run -d -p 8001:8001 --name recommendationserviceapp recommendationservice
+
+GraphQL:
+http://127.0.0.1:8001/graphql
+
+query {
+  recommendations {
+    id
+    bookId
+    score
+  }
+}
+
+
+query {
+  stats {
+    totalRecommendations
+    averageScore
+  }
+}
+
+query {
+  recommendationById(id: "68a0b2c653aa2f6f10f59573") {
+    id
+    bookId
+    score
+  }
+}
+
+query {
+  topRecommendations(limit: 5) {
+    bookId
+    score
+  }
+}
