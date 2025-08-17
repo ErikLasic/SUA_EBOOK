@@ -6,3 +6,5 @@ docker login
 docker tag counter-service:2.0 erkec123/counter-service:2.0
 
 docker push erkec123/counter-service:2.0
+
+https://hub.docker.com/r/erkec123/counter-service
