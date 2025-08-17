@@ -1,3 +1,10 @@
 docker-compose up --build
 
-^^ Zagon docker-compose (vseh 4 mikrostoritev)
+^^ Zagon docker-compose (vseh 5 mikrostoritev)
+
+Storitve:
+- Book Service (Python/FastAPI) - port 8000
+- Recommendation Service (Python/FastAPI) - port 8001  
+- User Service (Node.js/Express) - port 5001
+- Loan Service (Node.js/Express) - port 5002
+- Review Service (Java/Spring Boot) - port 5003

@@ -1,0 +1,22 @@
+docker build -t review-service .
+docker run -p 5003:5003 --env-file .env review-service
+
+^^ Zagon review-service (Spring Boot mikroseoritev)
+
+Endpoints:
+- GET /reviews/book/{bookId} - Vse recenzije knjige
+- GET /reviews/user/{userId} - Vse recenzije uporabnika  
+- POST /reviews - Nova recenzija
+- POST /reviews/book/{bookId}/quick - Hitro ocenjevanje
+- PUT /reviews/{reviewId} - Posodobi recenzijo
+- PUT /reviews/{reviewId}/rating - Posodobi samo oceno
+- DELETE /reviews/{reviewId} - Izbriše recenzijo
+- DELETE /reviews/book/{bookId} - Izbriše vse recenzije knjige (admin only)
+
+Swagger dokumentacija: http://localhost:5003/swagger-ui.html
+
+Povezuje se z:
+- Book Service (port 8000) - preveri, ali knjiga obstaja
+- Loan Service (port 5002) - preveri, ali je uporabnik izposodil knjigo
+
+JWT avtentikacija preko Authorization Bearer token

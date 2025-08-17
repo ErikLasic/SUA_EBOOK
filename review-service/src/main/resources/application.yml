@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: review-service
+  
+  data:
+    mongodb:
+      uri: ${MONGO_URL:mongodb://mongo:27017/reviewdb}
+      database: reviewdb
+  
+  main:
+    web-application-type: servlet
+
+server:
+  port: ${PORT:5003}
+
+jwt:
+  secret: ${JWT_SECRET:mysecret123456789abcdef}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.sua.ebook.reviewservice: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: INFO

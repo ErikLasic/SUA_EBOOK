@@ -1,0 +1,545 @@
+openapi: "3.0.3"
+info:
+  title: "Review Service API"
+  version: "1.0.0"
+  description: "Review and Rating Management Microservice for SUA E-Book System"
+  contact:
+    name: "SUA E-Book Team"
+    email: "support@sua-ebook.com"
+  license:
+    name: "MIT"
+    url: "https://opensource.org/licenses/MIT"
+
+servers:
+  - url: "http://localhost:5003"
+    description: "Local development server"
+  - url: "http://review-service:5003"
+    description: "Docker container server"
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT Token for authentication obtained from user-service"
+
+  schemas:
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Unique review identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b3"
+        bookId:
+          type: string
+          description: "Book identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b1"
+        userId:
+          type: string
+          description: "User identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b2"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: "Rating from 1 to 5 stars"
+          example: 4
+        reviewText:
+          type: string
+          maxLength: 1000
+          description: "Optional review text"
+          example: "Great book, highly recommended!"
+        createdAt:
+          type: string
+          format: date-time
+          description: "Creation timestamp"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "Last update timestamp"
+        isVerified:
+          type: boolean
+          description: "Whether the user has actually borrowed the book"
+          example: true
+
+    ReviewCreateDTO:
+      type: object
+      required:
+        - bookId
+        - rating
+      properties:
+        bookId:
+          type: string
+          description: "Book identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b1"
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: "Rating from 1 to 5 stars"
+          example: 4
+        reviewText:
+          type: string
+          maxLength: 1000
+          description: "Optional review text"
+          example: "Great book, highly recommended!"
+
+    ReviewUpdateDTO:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: "Updated rating from 1 to 5 stars"
+          example: 5
+        reviewText:
+          type: string
+          maxLength: 1000
+          description: "Updated review text"
+          example: "Even better upon re-reading!"
+
+    QuickRatingDTO:
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: "Rating from 1 to 5 stars"
+          example: 4
+
+    RatingUpdateDTO:
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: "Updated rating from 1 to 5 stars"
+          example: 5
+
+    BookReviewStats:
+      type: object
+      properties:
+        totalReviews:
+          type: integer
+          description: "Total number of reviews"
+          example: 25
+        averageRating:
+          type: number
+          format: double
+          description: "Average rating"
+          example: 4.2
+        ratingDistribution:
+          type: object
+          additionalProperties:
+            type: integer
+          description: "Distribution of ratings (1-5)"
+          example:
+            "1": 1
+            "2": 2
+            "3": 5
+            "4": 10
+            "5": 7
+
+    Error:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        service:
+          type: string
+          example: "review-service"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+
+tags:
+  - name: "Reviews"
+    description: "Review and rating operations"
+  - name: "Health"
+    description: "Service health check"
+
+paths:
+  /reviews/book/{bookId}:
+    get:
+      tags:
+        - "Reviews"
+      summary: "Get all reviews for a specific book"
+      description: "Retrieves all reviews for the specified book ID, ordered by creation date (newest first)"
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Book identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b1"
+      responses:
+        '200':
+          description: "Reviews retrieved successfully"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews/user/{userId}:
+    get:
+      tags:
+        - "Reviews"
+      summary: "Get all reviews by a specific user"
+      description: "Retrieves all reviews created by the specified user, ordered by creation date (newest first)"
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "User identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b2"
+      responses:
+        '200':
+          description: "User reviews retrieved successfully"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews:
+    post:
+      tags:
+        - "Reviews"
+      summary: "Create a new review"
+      description: "Creates a new review with rating and optional text. Users can only review each book once."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateDTO'
+            example:
+              bookId: "60f7b3b3b3b3b3b3b3b3b3b1"
+              rating: 4
+              reviewText: "Great book, highly recommended!"
+      responses:
+        '201':
+          description: "Review created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: "User has already reviewed this book"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reviews/book/{bookId}/quick:
+    post:
+      tags:
+        - "Reviews"
+      summary: "Quick rating for a book"
+      description: "Creates a quick rating (1-5 stars) without review text. Users can only rate each book once."
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Book identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuickRatingDTO'
+            example:
+              rating: 4
+      responses:
+        '201':
+          description: "Quick rating created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: "User has already rated this book"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reviews/{reviewId}:
+    put:
+      tags:
+        - "Reviews"
+      summary: "Update a review"
+      description: "Updates an existing review (rating and/or text). Users can only update their own reviews."
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Review identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b3"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewUpdateDTO'
+            example:
+              rating: 5
+              reviewText: "Even better upon re-reading!"
+      responses:
+        '200':
+          description: "Review updated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - "Reviews"
+      summary: "Delete a review"
+      description: "Deletes a specific review. Users can only delete their own reviews, admins can delete any review."
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Review identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b3"
+      responses:
+        '204':
+          description: "Review deleted successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews/{reviewId}/rating:
+    put:
+      tags:
+        - "Reviews"
+      summary: "Update only the rating of a review"
+      description: "Updates only the rating part of an existing review. Users can only update their own reviews."
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Review identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b3"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingUpdateDTO'
+            example:
+              rating: 5
+      responses:
+        '200':
+          description: "Rating updated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews/book/{bookId}:
+    delete:
+      tags:
+        - "Reviews"
+      summary: "Delete all reviews for a book"
+      description: "Deletes all reviews for a specific book. Admin only."
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Book identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b1"
+      responses:
+        '204':
+          description: "All book reviews deleted successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews/book/{bookId}/stats:
+    get:
+      tags:
+        - "Reviews"
+      summary: "Get review statistics for a book"
+      description: "Get average rating, total reviews, and rating distribution for a book"
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Book identifier"
+          example: "60f7b3b3b3b3b3b3b3b3b3b1"
+      responses:
+        '200':
+          description: "Book review statistics retrieved successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookReviewStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      tags:
+        - "Health"
+      summary: "Health check"
+      description: "Returns the health status of the review service"
+      security: []
+      responses:
+        '200':
+          description: "Service is healthy"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /:
+    get:
+      tags:
+        - "Health"
+      summary: "Root endpoint"
+      description: "Returns basic service information and available endpoints"
+      security: []
+      responses:
+        '200':
+          description: "Service information"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Review Service API"
+                  documentation:
+                    type: string
+                    example: "/swagger-ui.html"
+                  health:
+                    type: string
+                    example: "/health"
+
+components:
+  responses:
+    BadRequest:
+      description: "Invalid input data"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            timestamp: "2023-08-17T10:30:00"
+            status: 400
+            error: "Bad Request"
+            message: "Input validation failed"
+            fieldErrors:
+              rating: "Rating must be between 1 and 5"
+
+    Unauthorized:
+      description: "Unauthorized - invalid or missing JWT token"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            timestamp: "2023-08-17T10:30:00"
+            status: 401
+            error: "Unauthorized"
+            message: "Invalid or expired token"
+
+    NotFound:
+      description: "Resource not found"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            timestamp: "2023-08-17T10:30:00"
+            status: 404
+            error: "Not Found"
+            message: "Review not found"

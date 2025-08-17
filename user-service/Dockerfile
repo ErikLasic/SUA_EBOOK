@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # prod odvisnosti
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # koda
 COPY src/ ./src/
