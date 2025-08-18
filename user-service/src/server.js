@@ -9,13 +9,19 @@ const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 
+const { mountUserGraphQL } = require('./graphql');
 const usersRoutes = require('./routes/users.routes');
 
 const app = express();
 
-// middlewares
-app.use(helmet());
-app.use(cors()); // po potrebi omeji origin
+// --- Middlewares (Helmet prilagojen, da GraphiQL ne ostane na "Loading...")
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('tiny'));
 
@@ -24,20 +30,20 @@ const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, { explorer: true }));
 app.get('/docs.json', (_req, res) => res.json(swaggerDocument));
 
-// routes
+// REST rute
 app.use('/api', usersRoutes);
 
-// health & root
+// Health & root
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/', (_req, res) => res.redirect('/docs'));
 
-// error fallback
+// Error fallback
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ message: 'Internal Server Error' });
 });
 
-// bootstrap
+// Bootstrap
 const PORT = process.env.PORT || 5001;
 const MONGO_URL = process.env.MONGO_URL;
 
@@ -52,9 +58,13 @@ let server;
     });
     console.log('✅ MongoDB connected');
 
+    // ⬇️ Mount GraphQL (pred listen)
+    mountUserGraphQL(app);
+
     server = app.listen(PORT, () => {
       console.log(`✅ user-service @ http://localhost:${PORT}`);
       console.log(`📚 Swagger:      http://localhost:${PORT}/docs`);
+      console.log(`🔷 GraphQL:      http://localhost:${PORT}/graphql`);
     });
   } catch (e) {
     console.error('❌ Startup error:', e.message);
@@ -62,7 +72,7 @@ let server;
   }
 })();
 
-// graceful shutdown
+// Graceful shutdown
 const shutdown = async (signal) => {
   console.log(`\n⏹  ${signal} received, shutting down...`);
   if (server) await new Promise((r) => server.close(r));
