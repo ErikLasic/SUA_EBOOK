@@ -56,6 +56,8 @@ services:
       - NODE_ENV=production
       - MONGO_URL=${MONGO_URL_LOAN}
       - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user-service:5001/api
+      - BOOK_SERVICE_URL=http://book-service:8000
     depends_on:
       - mongo
     restart: unless-stopped
