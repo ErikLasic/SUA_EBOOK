@@ -1,0 +1,18 @@
+RENDER DEPLOY – Activity Log Service (container)
+
+1) Pushni mapo "activity-log-service" v GitHub.
+2) Pojdi na render.com → New → Web Service → izberi tvoj repo.
+3) V polju "Root Directory" nastavi: activity-log-service
+4) Build Command:    npm ci --omit=dev
+   Start Command:    node src/server.js
+5) Environment → Add Environment Variable:
+   - MONGO_URL = mongodb+srv://<user>:<pass>@cluster0.wtxui1k.mongodb.net/activitylogs?retryWrites=true&w=majority
+6) Deploy. Po deployu odpri:
+   - GET {RENDER_URL}/health  (mora vrniti {status:"ok"})
+   - GET {RENDER_URL}/events  (prazno polje)
+7) Integracija (npr. v loan-service):
+   - .env: ACTIVITY_URL={RENDER_URL}
+   - klic po uspešni izposoji:
+     axios.post(process.env.ACTIVITY_URL + "/events", {
+       type:"loans.created", userId, entityId: loan._id, meta:{ bookId: loan.bookId, dueDate: loan.dueDate }
+     });
