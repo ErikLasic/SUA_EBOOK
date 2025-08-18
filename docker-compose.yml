@@ -113,3 +113,18 @@ services:
       - review-service
       - statistics-service
     restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: sua-ebook-frontend:latest
+    container_name: frontend
+    ports:
+      - "3000:80"
+    # Frontend generally doesn't need to start after backends because it serves static files,
+    # but if you want backend services ready before exposing frontend, keep depends_on.
+    depends_on:
+      - graphql-service
+      - user-service
+    restart: unless-stopped
