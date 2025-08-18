@@ -36,7 +36,7 @@ class Query:
         return [recommendation_helper(r) for r in docs]
 
     @strawberry.field
-    def recommendation_by_id(self, id: str) -> Optional[Recommendation]:
+    def recommendationById(self, id: str) -> Optional[Recommendation]:
         try:
             doc = recommendations_collection.find_one({"_id": ObjectId(id)})
         except Exception:
@@ -55,7 +55,7 @@ class Query:
         return Stats(totalRecommendations=total, averageScore=avg_score)
 
     @strawberry.field
-    def top_recommendations(self, limit: int = 20) -> List[Recommendation]:
+    def topRecommendations(self, limit: int = 20) -> List[Recommendation]:
         docs = recommendations_collection.find().sort("score", -1).limit(limit)
         return [recommendation_helper(r) for r in docs]
 

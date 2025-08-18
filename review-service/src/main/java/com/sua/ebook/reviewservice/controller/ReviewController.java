@@ -27,6 +27,13 @@ public class ReviewController {
     @Autowired
     private ReviewService reviewService;
     
+    @GetMapping
+    @Operation(summary = "Get all reviews")
+    public ResponseEntity<List<Review>> getAllReviews() {
+        List<Review> reviews = reviewService.getAllReviews();
+        return ResponseEntity.ok(reviews);
+    }
+    
     @GetMapping("/book/{bookId}")
     @Operation(summary = "Get all reviews for a book")
     public ResponseEntity<List<Review>> getBookReviews(@PathVariable String bookId) {

@@ -21,6 +21,10 @@ public class ReviewService {
     @Autowired
     private ReviewRepository reviewRepository;
     
+    public List<Review> getAllReviews() {
+        return reviewRepository.findAllByOrderByCreatedAtDesc();
+    }
+    
     public List<Review> getReviewsByBookId(String bookId) {
         return reviewRepository.findByBookIdOrderByCreatedAtDesc(bookId);
     }
@@ -51,8 +55,7 @@ public class ReviewService {
         
         Review savedReview = reviewRepository.save(review);
         
-        // Send notification (async, non-blocking)
-        sendNotificationAsync(savedReview, isFirstReview);
+    // Notification sending disabled (notification-service removed)
         
         return savedReview;
     }
@@ -152,7 +155,7 @@ public class ReviewService {
         // Run notification sending in separate thread to avoid blocking
         new Thread(() -> {
             try {
-                String notificationUrl = "https://sua-meiyz0e94-dukens-projects-866eede9.vercel.app/api/review-created";
+                String notificationUrl = "https://sua-dukens-projects-866eede9.vercel.app/api/review-created";
                 
                 // Create JSON payload
                 String jsonPayload = String.format(
@@ -163,9 +166,27 @@ public class ReviewService {
                 System.out.println("Sending notification to: " + notificationUrl);
                 System.out.println("Payload: " + jsonPayload);
                 
-                // In production, use proper HTTP client (RestTemplate/WebClient)
-                // For now, just log the notification
-                System.out.println("✅ Notification sent for review: " + review.getId());
+                // Send actual HTTP request
+                try {
+                    java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                    java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                            .uri(java.net.URI.create(notificationUrl))
+                            .header("Content-Type", "application/json")
+                            .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonPayload))
+                            .timeout(java.time.Duration.ofSeconds(5))
+                            .build();
+                    
+                    java.net.http.HttpResponse<String> response = client.send(request, 
+                            java.net.http.HttpResponse.BodyHandlers.ofString());
+                    
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        System.out.println("✅ Notification sent successfully: " + response.statusCode());
+                    } else {
+                        System.out.println("⚠️ Notification service returned: " + response.statusCode());
+                    }
+                } catch (Exception httpEx) {
+                    System.err.println("❌ HTTP request failed: " + httpEx.getMessage());
+                }
                 
             } catch (Exception e) {
                 System.err.println("❌ Failed to send notification: " + e.getMessage());

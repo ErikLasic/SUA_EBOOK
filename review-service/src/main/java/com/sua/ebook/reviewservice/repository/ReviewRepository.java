@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface ReviewRepository extends MongoRepository<Review, String> {
     
+    List<Review> findAllByOrderByCreatedAtDesc();
     List<Review> findByBookIdOrderByCreatedAtDesc(String bookId);
     List<Review> findByUserIdOrderByCreatedAtDesc(String userId);
     Optional<Review> findByBookIdAndUserId(String bookId, String userId);

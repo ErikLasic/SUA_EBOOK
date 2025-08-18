@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+# Allow all origins by default; restrict in production if needed
+CORS(app)
 counter = 0
 
 @app.route("/increment", methods=["POST"])

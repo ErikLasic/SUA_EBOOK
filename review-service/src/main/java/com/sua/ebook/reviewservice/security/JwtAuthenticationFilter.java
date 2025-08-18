@@ -75,6 +75,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         logger.debug("shouldNotFilter check: {} {}", method, path);
         
+        // Izključi OPTIONS zahteve (CORS preflight)
+        if ("OPTIONS".equals(method)) {
+            logger.debug("Skipping filter for OPTIONS request: {}", path);
+            return true;
+        }
+        
         // Izključi health check in dokumentacijo iz avtentikacije
         if (path.startsWith("/actuator") || 
             path.startsWith("/v3/api-docs") || 

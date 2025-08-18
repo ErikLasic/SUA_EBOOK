@@ -1,0 +1,6 @@
+com\sua\ebook\reviewservice\dto\RatingUpdateDTO.class
+com\sua\ebook\reviewservice\config\WebClientConfig.class
+com\sua\ebook\reviewservice\controller\HealthController.class
+com\sua\ebook\reviewservice\exception\ReviewNotFoundException.class
+com\sua\ebook\reviewservice\exception\DuplicateReviewException.class
+com\sua\ebook\reviewservice\exception\UnauthorizedException.class

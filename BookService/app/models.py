@@ -13,6 +13,7 @@ class BookCreate(BookBase):
 
 class Book(BookBase):
     id: str = Field(..., example="650b8a1e3f1a2c0012345678", description="MongoDB ObjectId of the book")
+    created_by: str | None = Field(None, example="650b8a1e3f1a2c0012345678", description="User id who created the book")
 
 class BookUpdate(BaseModel):
     title: Optional[str] = Field(None, example="New title")

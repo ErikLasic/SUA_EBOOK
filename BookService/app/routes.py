@@ -42,8 +42,15 @@ def add_book(book: BookCreate, token: dict = Depends(verify_token)):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     book_dict = book.dict()
+    # store creator id from token payload if available. Adjust key if your token uses a different claim (e.g. 'sub')
+    creator_id = token.get("id") or token.get("sub") or token.get("email")
+    if creator_id:
+        book_dict["created_by"] = creator_id
     result = books_collection.insert_one(book_dict)
     book_dict["id"] = str(result.inserted_id)
+    
+    # Notification sending disabled (notification-service removed)
+    
     return book_dict
 
 # POST /books/bulk
@@ -162,9 +169,15 @@ def delete_book(book_id: str, token: dict = Depends(verify_token)):
 
     Only admins can delete books.
     """
-    if token["role"] != "admin":
-        raise HTTPException(status_code=401, detail="Admin privileges required")
-    
+    # allow admin or the creator of the book to delete
+    book = books_collection.find_one({"_id": ObjectId(book_id)})
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    requester_id = token.get("id") or token.get("sub") or token.get("email")
+    if token.get("role") != "admin" and book.get("created_by") != requester_id:
+        raise HTTPException(status_code=401, detail="Admin or owner privileges required")
+
     result = books_collection.delete_one({"_id": ObjectId(book_id)})
     if result.deleted_count:
         return {"message": "Book deleted"}
